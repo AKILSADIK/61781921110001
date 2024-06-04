@@ -5,6 +5,8 @@ const http = require('http');
 const app = express();
 const port = 3000;
 
+let productsData = [];
+
 app.use(express.json());
 
 app.get('/categories/:categoryname/products', (req, res) => {
@@ -16,7 +18,7 @@ app.get('/categories/:categoryname/products', (req, res) => {
         path: `/test/companies/AMZ/categories/${categoryname}/products?top=${n}&minPrice=1&maxPrice=10000`,
         method: 'GET',
         headers: {
-            "Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJNYXBDbGFpbXMiOnsiZXhwIjoxNzE3NTA2NTU3LCJpYXQiOjE3MTc1MDYyNTcsImlzcyI6IkFmZm9yZG1lZCIsImp0aSI6ImJlOTc5Y2UwLWUyYzEtNDBmOC1iYTFiLTU4ZDE2YzE4NDU0YiIsInN1YiI6ImFraWxzYWRpa0AxMjM0Z21haWwuY29tIn0sImNvbXBhbnlOYW1lIjoiU29uYSBjb2xsZWdlIG9mIFRlY2hub2xvZ3kiLCJjbGllbnRJRCI6ImJlOTc5Y2UwLWUyYzEtNDBmOC1iYTFiLTU4ZDE2YzE4NDU0YiIsImNsaWVudFNlY3JldCI6InZSSkt0QmJMUkpNUk9KUGsiLCJvd25lck5hbWUiOiJBa2lsIFNhZGlrIE0gSCIsIm93bmVyRW1haWwiOiJha2lsc2FkaWtAMTIzNGdtYWlsLmNvbSIsInJvbGxObyI6IjYxNzgxOTIxMTEwMDAxIn0.5JsOY27KGCtnN6Mu4uNK6LijvnJNBF1JSxjEUbqtYW0"
+            "Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJNYXBDbGFpbXMiOnsiZXhwIjoxNzE3NTA4MTQ5LCJpYXQiOjE3MTc1MDc4NDksImlzcyI6IkFmZm9yZG1lZCIsImp0aSI6ImJlOTc5Y2UwLWUyYzEtNDBmOC1iYTFiLTU4ZDE2YzE4NDU0YiIsInN1YiI6ImFraWxzYWRpa0AxMjM0Z21haWwuY29tIn0sImNvbXBhbnlOYW1lIjoiU29uYSBjb2xsZWdlIG9mIFRlY2hub2xvZ3kiLCJjbGllbnRJRCI6ImJlOTc5Y2UwLWUyYzEtNDBmOC1iYTFiLTU4ZDE2YzE4NDU0YiIsImNsaWVudFNlY3JldCI6InZSSkt0QmJMUkpNUk9KUGsiLCJvd25lck5hbWUiOiJBa2lsIFNhZGlrIE0gSCIsIm93bmVyRW1haWwiOiJha2lsc2FkaWtAMTIzNGdtYWlsLmNvbSIsInJvbGxObyI6IjYxNzgxOTIxMTEwMDAxIn0.UzHh5tcHrlQhS37zcs-JDzDbqKJMWvS0OWpYD_ZSSsg"
         }
     };
 
@@ -29,10 +31,10 @@ app.get('/categories/:categoryname/products', (req, res) => {
 
         response.on('end', () => {
             const products = JSON.parse(data);
-            const paginatedProducts = paginate(products, n, page);
-            const sortedProducts = sortProducts(paginatedProducts, sortBy, sortOrder);
-            const productsWithId = addUniqueId(sortedProducts);
-            res.json(productsWithId);
+            const sortedProducts = sortProducts(products, sortBy, sortOrder);
+            const paginatedProducts = paginate(sortedProducts, n, page);
+            productsData = addUniqueId(paginatedProducts); // Store the products with unique IDs
+            res.json(productsData);
         });
     });
 
@@ -44,12 +46,14 @@ app.get('/categories/:categoryname/products', (req, res) => {
     request.end();
 });
 
-
-
 app.get('/categories/:categoryname/products/:productid', (req, res) => {
-    const { categoryname, productid } = req.params;
-    const product = {}; // This should be replaced with actual fetching logic
-    res.json(product);
+    const { productid } = req.params;
+    const product = productsData.find(p => p.id === productid);
+    if (product) {
+        res.json(product);
+    } else {
+        res.status(404).json({ error: 'Product not found' });
+    }
 });
 
 function paginate(products, n, page) {
@@ -78,7 +82,6 @@ function addUniqueId(products) {
         return { ...product, id: uuidv4() };
     });
 }
-
 
 app.listen(port, () => {
     console.log(`Server running at http://localhost:${port}`);
